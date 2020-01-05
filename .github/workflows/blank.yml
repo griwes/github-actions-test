@@ -1,0 +1,27 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Run a multi-line script
+      run: |
+        sudo apt install flex bison
+        version=$(uname -r | egrep -o '^[0-9]+(\.[0-9]+)+')
+        sudo apt install linux-source-${version}
+        cd /usr/src
+        sudo tar xf linux-source-${version}.tar.bz2
+        cd linux-source-${version}
+        yes "" | sudo make oldconfig
+        sudo make prepare
+        sudo make CONFIG_MAC80211_HWSIM=m M=drivers/net/wireless/
+        sudo make CONFIG_MAC80211_HWSIM=m M=drivers/net/wireless/ modules_install
+        echo 'kernel/drivers/net/wireless/mac80211_hwsim.ko:' | sudo tee -a /lib/modules/$(uname -r)/modules.dep
+        sudo depmod -a
+        sudo modprobe mac80211_hwsim
+        ip link
